@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: ingestor
+  kafka:
+    producer:
+      bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      compression-type: snappy
+      acks: all
+      retries: 5
+      properties:
+        enable.idempotence: true
+
+kafka:
+  topic: ${KAFKA_TOPIC:logs.raw}
+  batch-size: ${KAFKA_BATCH_SIZE:100}
+  batch-timeout-ms: ${KAFKA_BATCH_TIMEOUT_MS:1000}
+
+grpc:
+  server:
+    port: ${GRPC_PORT:50051}
+
+# The ingestor has no REST API; use the main server port only for Actuator/metrics
+server:
+  port: ${METRICS_PORT:8081}
+
+management:
+  endpoints:
+    web:
+      base-path: /
+      path-mapping:
+        prometheus: metrics
+      exposure:
+        include: prometheus,health,info
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    com.logagg: ${LOG_LEVEL:INFO}
