@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: processor
+  kafka:
+    consumer:
+      bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+      group-id: ${KAFKA_CONSUMER_GROUP:processor-group}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      lettuce:
+        pool:
+          max-active: 10
+          min-idle: 5
+
+kafka:
+  topic: ${KAFKA_TOPIC:logs.raw}
+  consumer-group: ${KAFKA_CONSUMER_GROUP:processor-group}
+  batch-size: ${KAFKA_BATCH_SIZE:100}
+  batch-timeout-ms: ${KAFKA_BATCH_TIMEOUT_MS:1000}
+
+s3:
+  endpoint: ${S3_ENDPOINT:localhost:9000}
+  region: ${S3_REGION:us-east-1}
+  bucket: ${S3_BUCKET:logs-bucket}
+  access-key: ${S3_ACCESS_KEY_ID:minioadmin}
+  secret-key: ${S3_SECRET_ACCESS_KEY:minioadmin}
+  use-ssl: ${S3_USE_SSL:false}
+
+# Processor has no REST API — use main server port for Actuator/metrics only
+server:
+  port: ${METRICS_PORT:8082}
+
+management:
+  endpoints:
+    web:
+      base-path: /
+      path-mapping:
+        prometheus: metrics
+      exposure:
+        include: prometheus,health,info
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    com.logagg: ${LOG_LEVEL:INFO}

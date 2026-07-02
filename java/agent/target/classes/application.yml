@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: agent
+  main:
+    web-application-type: none  # CLI app — no HTTP server
+
+agent:
+  addr: ${INGESTOR_ADDR:localhost:50051}
+  tenant: ${AGENT_TENANT:demo-tenant}
+  service: ${AGENT_SERVICE:demo-service}
+  rate: ${AGENT_RATE:10}
+  duration: ${AGENT_DURATION:60}
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    com.logagg: ${LOG_LEVEL:INFO}
