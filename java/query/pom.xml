@@ -48,6 +48,12 @@
             <version>1.18.34</version>
             <optional>true</optional>
         </dependency>
+        <!-- LangChain4j: Google Gemini integration for the RAG-based RCA Copilot -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-google-ai-gemini</artifactId>
+            <version>0.36.2</version>
+        </dependency>
     </dependencies>
 
     <build>

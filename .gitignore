@@ -1,0 +1,48 @@
+# ── macOS ────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+
+# ── Maven build output ────────────────────────────────────────────────────────
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ── IDE files ─────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.classpath
+*.project
+*.settings/
+
+# ── Spring Boot / runtime ─────────────────────────────────────────────────────
+*.log
+logs/
+spring.log
+
+# ── Secrets — NEVER commit these ──────────────────────────────────────────────
+.env
+.env.*
+*.key
+*secret*
+*credentials*
+application-local.yml
+application-local.properties
+
+# ── OS / misc ─────────────────────────────────────────────────────────────────
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar

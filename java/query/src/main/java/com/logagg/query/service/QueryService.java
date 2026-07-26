@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+
 /**
  * Executes log queries by:
  *   1. Fetching S3 keys from the Redis ZSET index (time-range lookup)
@@ -30,6 +31,7 @@ import java.util.Set;
  *
  * Exactly mirrors the Go executeQuery logic.
  */
+
 @Service
 public class QueryService {
 
@@ -114,7 +116,67 @@ public class QueryService {
         return response;
     }
 
-    private byte[] downloadAndDecompress(String s3Key) {
+    /**
+     * Retrieval phase for the RCA pipeline.
+     *
+     * Fetches up to {@code maxEvents} log events from S3 chunks in the given time window,
+     * prioritizing ERROR and WARN events so they appear first in the LLM context.
+     *
+     * @param tenantId   Tenant scope.
+     * @param service    Service scope.
+     * @param fromTs     Window start, epoch milliseconds.
+     * @param toTs       Window end, epoch milliseconds.
+     * @param maxEvents  Maximum number of events to return (token-budget guard).
+     * @return           A {@link RetrievalResult} containing events and telemetry.
+     */
+    public RetrievalResult retrieveLogsForRca(
+            String tenantId, String service, long fromTs, long toTs, int maxEvents) {
+
+        List<LogEvent> allEvents = new ArrayList<>();
+        int chunksRead    = 0;
+        int eventsScanned = 0;
+
+        String zsetKey = "idx:" + tenantId + ":" + service;
+        Set<String> s3Keys = redisTemplate.opsForZSet().rangeByScore(zsetKey, fromTs, toTs);
+
+        if (s3Keys != null) {
+            for (String s3Key : s3Keys) {
+                byte[] decompressed = downloadAndDecompress(s3Key);
+                if (decompressed == null) continue;
+                chunksRead++;
+
+                try {
+                    List<LogEvent> chunk = ChunkUtils.deserializeFromNdjson(decompressed);
+                    eventsScanned += chunk.size();
+                    allEvents.addAll(chunk);
+                } catch (Exception e) {
+                    log.error("RCA: failed to deserialize chunk s3Key={}", s3Key, e);
+                }
+            }
+        }
+
+        // Sort: ERROR first, then WARN, then others — maximises signal density
+        // within the LLM token budget.
+        List<LogEvent> sorted = allEvents.stream()
+                .sorted((a, b) -> levelPriority(a.getLevel()) - levelPriority(b.getLevel()))
+                .limit(maxEvents)
+                .toList();
+
+        return new RetrievalResult(sorted, chunksRead, eventsScanned);
+    }
+
+    /** Lower value = higher priority in the context window. */
+    private int levelPriority(String level) {
+        if (level == null) return 3;
+        return switch (level.toUpperCase()) {
+            case "ERROR" -> 0;
+            case "WARN"  -> 1;
+            case "INFO"  -> 2;
+            default      -> 3;
+        };
+    }
+
+    byte[] downloadAndDecompress(String s3Key) {
         try {
             ResponseBytes<GetObjectResponse> responseBytes = s3Client.getObjectAsBytes(
                     GetObjectRequest.builder().bucket(bucket).key(s3Key).build());
@@ -124,6 +186,15 @@ public class QueryService {
             return null;
         }
     }
+
+    /**
+     * Result record for the RCA retrieval phase.
+     *
+     * @param events        Prioritised, capped list of log events for LLM context.
+     * @param chunksRead    Number of S3 chunks downloaded.
+     * @param eventsScanned Total events deserialized before the cap was applied.
+     */
+    public record RetrievalResult(List<LogEvent> events, int chunksRead, int eventsScanned) {}
 
     private boolean matches(LogEvent event, QueryRequest req) {
         if (event.getTimestamp() < req.getFromTs() || event.getTimestamp() > req.getToTs()) {

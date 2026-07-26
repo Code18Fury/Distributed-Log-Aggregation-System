@@ -46,3 +46,18 @@ logging:
   level:
     root: ${LOG_LEVEL:INFO}
     com.logagg: ${LOG_LEVEL:INFO}
+
+# ── RAG-based Root Cause Analysis Copilot ───────────────────────────────────
+rca:
+  # Maximum log events passed as context to the LLM. Higher = better accuracy
+  # but higher latency and token cost. 200 is a safe default for gpt/gemini models.
+  max-context-events: ${RCA_MAX_CONTEXT_EVENTS:200}
+  llm:
+    # Gemini model to use. gemini-1.5-flash is fast and cost-efficient for RCA.
+    model: ${RCA_LLM_MODEL:gemini-1.5-flash}
+    # Loaded from environment variable — NEVER hardcode a key here.
+    api-key: ${GEMINI_API_KEY}
+    # Low temperature keeps the RCA deterministic and factual.
+    temperature: 0.2
+    # Sufficient tokens for a structured JSON RCA report.
+    max-output-tokens: 1024
